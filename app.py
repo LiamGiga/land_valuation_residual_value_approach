@@ -7,39 +7,63 @@ st.set_page_config(page_title="Residual Land Valuation", layout="wide")
 
 # --- Custom Helper Function for Synced Slider & Input Box ---
 def sync_slider_input(label, min_val, max_val, default_val, step, key, is_float=False):
-    # 1. Initialize the session state so Streamlit remembers the values
+    # 1. Initialize states (Number for Slider, Formatted String for Text Box)
     if key not in st.session_state:
         st.session_state[key] = default_val
-    if f"{key}_num" not in st.session_state:
-        st.session_state[f"{key}_num"] = default_val
+    if f"{key}_txt" not in st.session_state:
+        if is_float:
+            st.session_state[f"{key}_txt"] = f"{default_val:,.2f}"
+        else:
+            st.session_state[f"{key}_txt"] = f"{default_val:,}"  # Formats with commas
 
-    # 2. Define the callbacks to sync them together
+    # 2. Callback: Slider to Text Box (Injects commas)
     def update_from_slider():
-        st.session_state[f"{key}_num"] = st.session_state[key]
+        val = st.session_state[key]
+        if is_float:
+            st.session_state[f"{key}_txt"] = f"{val:,.2f}"
+        else:
+            st.session_state[f"{key}_txt"] = f"{int(val):,}"
 
-    def update_from_num():
-        st.session_state[key] = st.session_state[f"{key}_num"]
+    # 3. Callback: Text Box to Slider (Strips commas for math)
+    def update_from_txt():
+        raw_str = st.session_state[f"{key}_txt"]
 
-    # 3. Build the UI: Label on top, then [Slider] [Input Box] side-by-side
-    st.markdown(f"<span style='font-size: 14px; font-weight: 600;'>{label}</span>", unsafe_allow_html=True)
+        # Remove commas so python can read it as a number
+        clean_str = raw_str.replace(",", "").replace(" ", "")
 
-    col_slide, col_box = st.columns([3, 1])  # Slider takes 75% width, Box takes 25%
+        try:
+            val = float(clean_str) if is_float else int(clean_str)
+            val = max(min_val, min(val, max_val))  # Enforce min/max limits
+            st.session_state[key] = val
 
-    with col_slide:
-        st.slider(
-            label, min_value=min_val, max_value=max_val, step=step,
-            key=key, on_change=update_from_slider, label_visibility="collapsed"
-        )
-    with col_box:
-        st.number_input(
-            label, min_value=min_val, max_value=max_val, step=step,
-            key=f"{key}_num", on_change=update_from_num, label_visibility="collapsed",
-            format="%.2f" if is_float else "%d"
-        )
+            # Reformat the text box so it instantly looks pretty again
+            if is_float:
+                st.session_state[f"{key}_txt"] = f"{val:,.2f}"
+            else:
+                st.session_state[f"{key}_txt"] = f"{int(val):,}"
+        except ValueError:
+            # If they typed letters by accident, revert it to the slider's last safe number
+            val = st.session_state[key]
+            if is_float:
+                st.session_state[f"{key}_txt"] = f"{val:,.2f}"
+            else:
+                st.session_state[f"{key}_txt"] = f"{int(val):,}"
 
-    # Return the final synced value for our math calculations
-    return st.session_state[key]
+        st.markdown(f"<span style='font-size: 14px; font-weight: 600;'>{label}</span>", unsafe_allow_html=True)
+        col_slide, col_box = st.columns([3, 1])
 
+        with col_slide:
+            st.slider(
+                label, min_value=min_val, max_value=max_val, step=step,
+                key=key, on_change=update_from_slider, label_visibility="collapsed"
+            )
+        with col_box:
+            # TEXT INPUT: Allows the user to type freely, while our logic formats it
+            st.text_input(
+                label, key=f"{key}_txt", on_change=update_from_txt, label_visibility="collapsed"
+            )
+
+        return st.session_state[key]
 
 def main():
     # --- Custom CSS for layout spacing ---
