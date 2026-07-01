@@ -5,6 +5,42 @@ import pandas as pd
 st.set_page_config(page_title="Residual Land Valuation", layout="wide")
 
 
+# --- Custom Helper Function for Synced Slider & Input Box ---
+def sync_slider_input(label, min_val, max_val, default_val, step, key, is_float=False):
+    # 1. Initialize the session state so Streamlit remembers the values
+    if key not in st.session_state:
+        st.session_state[key] = default_val
+    if f"{key}_num" not in st.session_state:
+        st.session_state[f"{key}_num"] = default_val
+
+    # 2. Define the callbacks to sync them together
+    def update_from_slider():
+        st.session_state[f"{key}_num"] = st.session_state[key]
+
+    def update_from_num():
+        st.session_state[key] = st.session_state[f"{key}_num"]
+
+    # 3. Build the UI: Label on top, then [Slider] [Input Box] side-by-side
+    st.markdown(f"<span style='font-size: 14px; font-weight: 600;'>{label}</span>", unsafe_allow_html=True)
+
+    col_slide, col_box = st.columns([3, 1])  # Slider takes 75% width, Box takes 25%
+
+    with col_slide:
+        st.slider(
+            label, min_value=min_val, max_value=max_val, step=step,
+            key=key, on_change=update_from_slider, label_visibility="collapsed"
+        )
+    with col_box:
+        st.number_input(
+            label, min_value=min_val, max_value=max_val, step=step,
+            key=f"{key}_num", on_change=update_from_num, label_visibility="collapsed",
+            format="%.2f" if is_float else "%d"
+        )
+
+    # Return the final synced value for our math calculations
+    return st.session_state[key]
+
+
 def main():
     # --- Custom CSS for layout spacing ---
     st.markdown("""
@@ -18,33 +54,29 @@ def main():
     st.title("Land Valuation Model Residual Value Approach")
     st.caption("Based on the HKIS Residual Method of Valuation")
 
-    # Reserve a spot at the top for our results
     results_container = st.container()
     st.divider()
 
-    # --- Inputs Layout ---
-    st.info("💡 **Pro-Tip:** Click on the red number above any slider to type an exact value!")
-
+    # --- Inputs Layout (Using our new synced UI function) ---
     col_revenue, col_costs, col_finance = st.columns(3)
 
     with col_revenue:
         st.subheader("Scale & Revenue")
-        gfa = st.slider("Total GFA (sq ft)", min_value=100_000, max_value=10_000_000, value=5_000_000, step=100_000)
-        efficiency_pct = st.slider("Efficiency (%)", min_value=50, max_value=100, value=80, step=1)
-        asp = st.slider("Average Selling Price ($/sf SFA)", min_value=1000, max_value=50000, value=2600, step=100)
+        gfa = sync_slider_input("Total GFA (sq ft)", 0, 100_000_000, 5_000_000, 100_000, "gfa")
+        efficiency_pct = sync_slider_input("Efficiency (%)", 0, 100, 80, 1, "efficiency")
+        asp = sync_slider_input("Average Selling Price ($/sf SFA)", 0, 100_000, 2600, 100, "asp")
 
     with col_costs:
         st.subheader("Development Costs")
-        unit_const_cost = st.slider("Construction Cost ($/sf GFA)", min_value=1000, max_value=20000, value=5000,
-                                    step=100)
-        prof_fee_pct = st.slider("Professional Fees (%)", min_value=1, max_value=15, value=6, step=1)
-        sm_fee_pct = st.slider("Sales & Marketing (%)", min_value=1, max_value=15, value=6, step=1)
-        dev_profit_pct = st.slider("Developer Profit (%)", min_value=5, max_value=40, value=20, step=1)
+        unit_const_cost = sync_slider_input("Construction Cost ($/sf GFA)", 0, 20_000, 5000, 100, "const_cost")
+        prof_fee_pct = sync_slider_input("Professional Fees (%)", 0, 15, 6, 1, "prof_fee")
+        sm_fee_pct = sync_slider_input("Sales & Marketing (%)", 0, 15, 6, 1, "sm_fee")
+        dev_profit_pct = sync_slider_input("Developer Profit (%)", 0, 100, 20, 1, "dev_profit")
 
     with col_finance:
         st.subheader("Financing")
-        interest_rate_pct = st.slider("Interest Rate (%)", min_value=1.0, max_value=15.0, value=4.0, step=0.1)
-        loan_period = st.slider("Loan Period (Years)", min_value=1.0, max_value=10.0, value=3.0, step=0.5)
+        interest_rate_pct = sync_slider_input("Interest Rate (%)", 0.0, 15.0, 4.0, 0.1, "interest", is_float=True)
+        loan_period = sync_slider_input("Loan Period (Years)", 0.0, 10.0, 3.0, 0.5, "loan_period", is_float=True)
 
     # --- Interim Calculations ---
     # 1. Areas and Revenue
