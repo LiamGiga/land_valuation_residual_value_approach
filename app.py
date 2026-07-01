@@ -187,7 +187,7 @@ def main():
             # Stack the values vertically
             st.metric(label="Residual Land Value", value=f"HKD {residual_value:,.0f}")
             st.write("")  # small gap
-            st.metric(label="Accommodation Value", value=f"HKD {accommodation_value:,.0f}/sf")
+            st.metric(label="Accommodation Value", value=f"HKD {accommodation_value:,.0f}/sf GFA")
 
 
 if __name__ == "__main__":
