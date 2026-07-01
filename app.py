@@ -5,7 +5,6 @@ import pandas as pd
 st.set_page_config(page_title="Residual Land Valuation", layout="wide")
 
 
-# --- Custom Helper Function for Synced Slider & Input Box ---
 # --- Custom Helper Function for Synced Slider & TEXT Box (With Commas!) ---
 def sync_slider_input(label, min_val, max_val, default_val, step, key, is_float=False):
     # 1. Initialize states safely (Catching None values)
@@ -78,6 +77,7 @@ def sync_slider_input(label, min_val, max_val, default_val, step, key, is_float=
         final_val = default_val
     return final_val
 
+
 def main():
     # --- Custom CSS for layout spacing ---
     st.markdown("""
@@ -94,7 +94,7 @@ def main():
     results_container = st.container()
     st.divider()
 
-    # --- Inputs Layout (Using our new synced UI function) ---
+    # --- Inputs Layout ---
     col_revenue, col_costs, col_finance = st.columns(3)
 
     with col_revenue:
@@ -113,7 +113,20 @@ def main():
     with col_finance:
         st.subheader("Financing")
         interest_rate_pct = sync_slider_input("Interest Rate (%)", 0.0, 15.0, 5.0, 0.1, "interest", is_float=True)
-        loan_period = sync_slider_input("Loan Period (Years)", 0.0, 10.0, 5.0, 0.5, "loan_period", is_float=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)  # visual spacing
+
+        # Split Loan Periods
+        land_loan_period = sync_slider_input("Interest Period for Land (Years)", 0.0, 10.0, 5.0, 0.5,
+                                             "land_loan_period", is_float=True)
+        const_loan_period = sync_slider_input("Interest Period for Construction (Years)", 0.0, 10.0, 4.0, 0.5,
+                                              "const_loan_period", is_float=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)  # visual spacing
+
+        # Updated LTV terminology
+        land_ltv_pct = sync_slider_input("Loan-to-Value for Land (%)", 0, 100, 80, 1, "land_ltv_pct")
+        const_ltv_pct = sync_slider_input("Loan-to-Value for Construction (%)", 0, 100, 100, 1, "const_ltv_pct")
 
     # --- Interim Calculations ---
     # 1. Areas and Revenue
@@ -126,15 +139,25 @@ def main():
     sm_fee = gdv * (sm_fee_pct / 100)
     dev_profit = gdv * (dev_profit_pct / 100)
 
-    # 3. Finance
+    # 3. Finance Variables
     interest_rate = interest_rate_pct / 100
+    land_loan_ratio = land_ltv_pct / 100
+    const_loan_ratio = const_ltv_pct / 100
 
     # --- Main Calculation (Algebraic Solution) ---
-    const_interest = const_cost * 0.5 * interest_rate * loan_period
+    # Const Interest uses specific construction loan period
+    const_loan_amount = const_cost * const_loan_ratio
+    const_interest = const_loan_amount * 0.5 * interest_rate * const_loan_period
+
     fixed_costs = const_cost + prof_fee + sm_fee + dev_profit + const_interest
 
-    residual_value = (gdv - fixed_costs) / (1 + (interest_rate * loan_period))
-    land_interest = residual_value * 1.0 * interest_rate * loan_period
+    # Solve for Residual Value algebraically using specific land loan period
+    land_finance_factor = land_loan_ratio * interest_rate * land_loan_period
+    residual_value = (gdv - fixed_costs) / (1 + land_finance_factor)
+
+    # Calculate actual Land Interest now that we have the Residual Value
+    land_loan_amount = residual_value * land_loan_ratio
+    land_interest = land_loan_amount * 1.0 * interest_rate * land_loan_period
 
     total_costs = fixed_costs + land_interest
 
@@ -151,7 +174,10 @@ def main():
         "Sales & Marketing (%)": [sm_fee_pct],
         "Developer Profit (%)": [dev_profit_pct],
         "Interest Rate (%)": [interest_rate_pct],
-        "Loan Period (Years)": [loan_period],
+        "Interest Period for Land (Years)": [land_loan_period],
+        "Interest Period for Construction (Years)": [const_loan_period],
+        "Loan-to-Value for Land (%)": [land_ltv_pct],
+        "Loan-to-Value for Construction (%)": [const_ltv_pct],
         "Gross Development Value (HKD)": [gdv],
         "Total Development Costs (HKD)": [total_costs],
         "Residual Land Value (HKD)": [residual_value],
