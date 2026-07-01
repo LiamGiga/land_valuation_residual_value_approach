@@ -145,7 +145,7 @@ def main():
         with res_col1:
             st.metric(label="Gross Development Value", value=f"HKD {gdv:,.0f}")
         with res_col2:
-            st.metric(label="Total Dev Costs", value=f"HKD {total_costs:,.0f}")
+            st.metric(label="Total Development Costs", value=f"HKD {total_costs:,.0f}")
         with res_col3:
             # Stack the values vertically
             st.metric(label="Residual Land Value", value=f"HKD {residual_value:,.0f}")
