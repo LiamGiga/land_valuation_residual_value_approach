@@ -62,21 +62,21 @@ def main():
 
     with col_revenue:
         st.subheader("Scale & Revenue")
-        gfa = sync_slider_input("Total GFA (sq ft)", 0, 1_000_000, 5_000_000, 100_000, "gfa")
-        efficiency_pct = sync_slider_input("Efficiency (%)", 0, 100, 80, 1, "efficiency")
-        asp = sync_slider_input("Average Selling Price ($/sf SFA)", 0, 100_000, 2600, 100, "asp")
+        gfa = sync_slider_input("Total GFA (sq ft)", 0, 1_000_000, 500_000, 100_000, "gfa")
+        efficiency_pct = sync_slider_input("Efficiency (%)", 0, 100, 90, 1, "efficiency")
+        asp = sync_slider_input("Average Selling Price ($/sf SFA)", 0, 100_000, 20000, 100, "asp")
 
     with col_costs:
         st.subheader("Development Costs")
         unit_const_cost = sync_slider_input("Construction Cost ($/sf GFA)", 0, 20_000, 5000, 100, "const_cost")
-        prof_fee_pct = sync_slider_input("Professional Fees (%)", 0, 15, 6, 1, "prof_fee")
+        prof_fee_pct = sync_slider_input("Professional Fees (%)", 0, 15, 4, 1, "prof_fee")
         sm_fee_pct = sync_slider_input("Sales & Marketing (%)", 0, 15, 6, 1, "sm_fee")
         dev_profit_pct = sync_slider_input("Developer Profit (%)", 0, 100, 20, 1, "dev_profit")
 
     with col_finance:
         st.subheader("Financing")
-        interest_rate_pct = sync_slider_input("Interest Rate (%)", 0.0, 15.0, 4.0, 0.1, "interest", is_float=True)
-        loan_period = sync_slider_input("Loan Period (Years)", 0.0, 10.0, 3.0, 0.5, "loan_period", is_float=True)
+        interest_rate_pct = sync_slider_input("Interest Rate (%)", 0.0, 15.0, 5.0, 0.1, "interest", is_float=True)
+        loan_period = sync_slider_input("Loan Period (Years)", 0.0, 10.0, 5.0, 0.5, "loan_period", is_float=True)
 
     # --- Interim Calculations ---
     # 1. Areas and Revenue
