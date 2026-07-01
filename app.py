@@ -6,34 +6,43 @@ st.set_page_config(page_title="Residual Land Valuation", layout="wide")
 
 
 # --- Custom Helper Function for Synced Slider & Input Box ---
+# --- Custom Helper Function for Synced Slider & TEXT Box (With Commas!) ---
 def sync_slider_input(label, min_val, max_val, default_val, step, key, is_float=False):
-    # 1. Initialize states (Number for Slider, Formatted String for Text Box)
-    if key not in st.session_state:
+    # 1. Initialize states safely (Catching None values)
+    if st.session_state.get(key) is None:
         st.session_state[key] = default_val
-    if f"{key}_txt" not in st.session_state:
+
+    if st.session_state.get(f"{key}_txt") is None:
         if is_float:
             st.session_state[f"{key}_txt"] = f"{default_val:,.2f}"
         else:
-            st.session_state[f"{key}_txt"] = f"{default_val:,}"  # Formats with commas
+            st.session_state[f"{key}_txt"] = f"{default_val:,}"
 
-    # 2. Callback: Slider to Text Box (Injects commas)
+    # 2. Callback: Slider to Text Box
     def update_from_slider():
-        val = st.session_state[key]
+        val = st.session_state.get(key, default_val)
+        if val is None: val = default_val
         if is_float:
             st.session_state[f"{key}_txt"] = f"{val:,.2f}"
         else:
             st.session_state[f"{key}_txt"] = f"{int(val):,}"
 
-    # 3. Callback: Text Box to Slider (Strips commas for math)
+    # 3. Callback: Text Box to Slider
     def update_from_txt():
-        raw_str = st.session_state[f"{key}_txt"]
+        raw_str = st.session_state.get(f"{key}_txt", "")
+
+        # SAFETY NET 1: If the user deleted everything, reset to default instantly
+        if not raw_str or str(raw_str).strip() == "":
+            st.session_state[key] = default_val
+            st.session_state[f"{key}_txt"] = f"{default_val:,.2f}" if is_float else f"{default_val:,}"
+            return
 
         # Remove commas so python can read it as a number
-        clean_str = raw_str.replace(",", "").replace(" ", "")
+        clean_str = str(raw_str).replace(",", "").replace(" ", "")
 
         try:
             val = float(clean_str) if is_float else int(clean_str)
-            val = max(min_val, min(val, max_val))  # Enforce min/max limits
+            val = max(min_val, min(val, max_val))  # Enforce limits
             st.session_state[key] = val
 
             # Reformat the text box so it instantly looks pretty again
@@ -42,28 +51,32 @@ def sync_slider_input(label, min_val, max_val, default_val, step, key, is_float=
             else:
                 st.session_state[f"{key}_txt"] = f"{int(val):,}"
         except ValueError:
-            # If they typed letters by accident, revert it to the slider's last safe number
-            val = st.session_state[key]
+            # SAFETY NET 2: Revert to last known safe number if they typed letters
+            val = st.session_state.get(key, default_val)
+            if val is None: val = default_val
             if is_float:
                 st.session_state[f"{key}_txt"] = f"{val:,.2f}"
             else:
                 st.session_state[f"{key}_txt"] = f"{int(val):,}"
 
-        st.markdown(f"<span style='font-size: 14px; font-weight: 600;'>{label}</span>", unsafe_allow_html=True)
-        col_slide, col_box = st.columns([3, 1])
+    st.markdown(f"<span style='font-size: 14px; font-weight: 600;'>{label}</span>", unsafe_allow_html=True)
+    col_slide, col_box = st.columns([3, 1])
 
-        with col_slide:
-            st.slider(
-                label, min_value=min_val, max_value=max_val, step=step,
-                key=key, on_change=update_from_slider, label_visibility="collapsed"
-            )
-        with col_box:
-            # TEXT INPUT: Allows the user to type freely, while our logic formats it
-            st.text_input(
-                label, key=f"{key}_txt", on_change=update_from_txt, label_visibility="collapsed"
-            )
+    with col_slide:
+        st.slider(
+            label, min_value=min_val, max_value=max_val, step=step,
+            key=key, on_change=update_from_slider, label_visibility="collapsed"
+        )
+    with col_box:
+        st.text_input(
+            label, key=f"{key}_txt", on_change=update_from_txt, label_visibility="collapsed"
+        )
 
-        return st.session_state[key]
+    # 4. Safely return the final value, guaranteeing it is NEVER None
+    final_val = st.session_state.get(key)
+    if final_val is None:
+        final_val = default_val
+    return final_val
 
 def main():
     # --- Custom CSS for layout spacing ---
