@@ -88,7 +88,7 @@ def main():
     """, unsafe_allow_html=True)
 
     # --- Header ---
-    st.title("Land Valuation Model Residual Value Approach")
+    st.title("Land Valuation Model: Residual Value Approach")
     st.caption("Based on the HKIS Residual Method of Valuation")
 
     results_container = st.container()
