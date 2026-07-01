@@ -62,7 +62,7 @@ def main():
 
     with col_revenue:
         st.subheader("Scale & Revenue")
-        gfa = sync_slider_input("Total GFA (sq ft)", 0, 100_000_000, 5_000_000, 100_000, "gfa")
+        gfa = sync_slider_input("Total GFA (sq ft)", 0, 1_000_000, 5_000_000, 100_000, "gfa")
         efficiency_pct = sync_slider_input("Efficiency (%)", 0, 100, 80, 1, "efficiency")
         asp = sync_slider_input("Average Selling Price ($/sf SFA)", 0, 100_000, 2600, 100, "asp")
 
