@@ -15,7 +15,7 @@ def main():
     """, unsafe_allow_html=True)
 
     # --- Header ---
-    st.title("General Land Valuation Model")
+    st.title("Land Valuation Model Residual Value Approach")
     st.caption("Based on the HKIS Residual Method of Valuation")
 
     # Reserve a spot at the top for our results
@@ -23,13 +23,13 @@ def main():
     st.divider()
 
     # --- Inputs Layout ---
-    # Tip: You can click the number on the right of any slider to type an exact value!
+    st.info("💡 **Pro-Tip:** Click on the red number above any slider to type an exact value!")
+
     col_revenue, col_costs, col_finance = st.columns(3)
 
     with col_revenue:
         st.subheader("Scale & Revenue")
-        gfa = st.number_input("Total GFA (sq ft)", min_value=100_000, max_value=10_000_000, value=5_000_000,
-                              step=100_000)
+        gfa = st.slider("Total GFA (sq ft)", min_value=100_000, max_value=10_000_000, value=5_000_000, step=100_000)
         efficiency_pct = st.slider("Efficiency (%)", min_value=50, max_value=100, value=80, step=1)
         asp = st.slider("Average Selling Price ($/sf SFA)", min_value=1000, max_value=50000, value=2600, step=100)
 
@@ -69,8 +69,10 @@ def main():
 
     total_costs = fixed_costs + land_interest
 
+    # 4. Key Performance Indicators
+    accommodation_value = residual_value / gfa if gfa > 0 else 0
+
     # --- CSV Export Setup ---
-    # We create a dictionary of all our data, then convert it to a pandas DataFrame
     export_data = {
         "Total GFA (sq ft)": [gfa],
         "Efficiency (%)": [efficiency_pct],
@@ -83,7 +85,8 @@ def main():
         "Loan Period (Years)": [loan_period],
         "Gross Development Value (HKD)": [gdv],
         "Total Development Costs (HKD)": [total_costs],
-        "Residual Land Value (HKD)": [residual_value]
+        "Residual Land Value (HKD)": [residual_value],
+        "Accommodation Value ($/sf GFA)": [accommodation_value]
     }
 
     df_export = pd.DataFrame(export_data)
@@ -91,7 +94,6 @@ def main():
 
     # --- Fill the Top Container with our Results & Download Button ---
     with results_container:
-        # Header and Download Button side-by-side
         header_col, btn_col = st.columns([4, 1])
         with header_col:
             st.subheader("Valuation Results")
@@ -105,15 +107,17 @@ def main():
                 use_container_width=True
             )
 
-        # Metrics formatted with full commas (e.g., 13,000,000,000)
-        res_col1, res_col2, res_col3 = st.columns(3)
+        # Updated to 4 columns to include Accommodation Value
+        res_col1, res_col2, res_col3, res_col4 = st.columns(4)
 
         with res_col1:
-            st.metric(label="Gross Development Value (GDV)", value=f"HKD {gdv:,.0f}")
+            st.metric(label="Gross Development Value", value=f"HKD {gdv:,.0f}")
         with res_col2:
-            st.metric(label="Total Development Costs", value=f"HKD {total_costs:,.0f}")
+            st.metric(label="Total Dev Costs", value=f"HKD {total_costs:,.0f}")
         with res_col3:
             st.metric(label="Residual Land Value", value=f"HKD {residual_value:,.0f}")
+        with res_col4:
+            st.metric(label="Accommodation Value", value=f"HKD {accommodation_value:,.0f}/sf")
 
 
 if __name__ == "__main__":
