@@ -1,7 +1,7 @@
 import streamlit as st
 
 # ---------- Configuration ----------
-st.set_page_config(page_title="Residual Land Valuation", layout="centered")
+st.set_page_config(page_title="Residual Land Valuation", layout="wide")
 
 
 def main():
@@ -14,54 +14,79 @@ def main():
     """, unsafe_allow_html=True)
 
     # --- Header ---
-    st.title("Land Valuation Model")
-    st.caption("Residual Value Valuation Method")
+    st.title("General Land Valuation Model")
+    st.caption("Based on the HKIS Residual Method of Valuation")
+    st.divider()
 
-    # --- Top Metrics Row ---
-    col1, col2 = st.columns(2)
-    with col1:
-        gross_rev_metric = st.empty()
-    with col2:
-        dev_net_metric = st.empty()
+    # --- Inputs Layout ---
+    # We use columns to organize the inputs neatly
+    col_revenue, col_costs, col_finance = st.columns(3)
 
-    st.write("")
+    with col_revenue:
+        st.subheader("Scale & Revenue")
+        gfa = st.number_input("Total GFA (sq ft)", min_value=100_000, max_value=10_000_000, value=5_000_000,
+                              step=100_000)
+        efficiency_pct = st.slider("Efficiency (%)", min_value=50, max_value=100, value=80, step=1)
+        asp = st.slider("ASP ($/sf SFA)", min_value=1000, max_value=50000, value=2600, step=100)
 
-    col3, col4, col5 = st.columns([1, 2, 1])
-    with col4:
-        mtrc_take_metric = st.empty()
+    with col_costs:
+        st.subheader("Development Costs")
+        unit_const_cost = st.slider("Construction Cost ($/sf GFA)", min_value=1000, max_value=20000, value=5000,
+                                    step=100)
+        prof_fee_pct = st.slider("Professional Fees (%)", min_value=1, max_value=15, value=6, step=1)
+        sm_fee_pct = st.slider("Sales & Marketing (%)", min_value=1, max_value=15, value=6, step=1)
+        dev_profit_pct = st.slider("Developer Profit (%)", min_value=5, max_value=40, value=20, step=1)
+
+    with col_finance:
+        st.subheader("Financing")
+        interest_rate_pct = st.slider("Interest Rate (%)", min_value=1.0, max_value=15.0, value=4.0, step=0.1)
+        loan_period = st.slider("Loan Period (Years)", min_value=1.0, max_value=10.0, value=3.0, step=0.5)
 
     st.divider()
 
-    # --- Inputs (Sliders) ---
-    st.subheader("Assumptions")
+    # --- Interim Calculations ---
+    # 1. Areas and Revenue
+    sfa = gfa * (efficiency_pct / 100)
+    gdv = sfa * asp
 
-    # Static area assumptions for the model
-    total_gfa = 5_000_000
-    total_sfa = 4_000_000  # Assuming 80% efficiency
+    # 2. Hard & Soft Costs
+    const_cost = unit_const_cost * gfa
+    prof_fee = const_cost * (prof_fee_pct / 100)
+    sm_fee = gdv * (sm_fee_pct / 100)
+    dev_profit = gdv * (dev_profit_pct / 100)
 
-    # Updated label to $/sf SFA
-    sfa_price = st.slider("$/sf SFA", min_value=0, max_value=5000, value=2600, step=100)
-    construction_cost = st.slider("Construction Cost (HKD M)", min_value=0, max_value=10000, value=5000, step=100)
-    land_premium = st.slider("Land Premium (HKD M)", min_value=0, max_value=15000, value=8000, step=100)
-    upfront_lump_sum = st.slider("Upfront Lump Sum (HKD M)", min_value=0, max_value=5000, value=2000, step=100)
-    mtrc_profit_share_pct = st.slider("MTRC Profit Share (%)", min_value=0, max_value=100, value=25, step=1)
+    # 3. Finance (Converting percentages to decimals)
+    interest_rate = interest_rate_pct / 100
 
-    # --- Calculations ---
-    # Calculate GDV using Saleable Floor Area
-    gross_revenue_b = (sfa_price * total_sfa) / 1_000_000_000
+    # --- Main Calculation (Algebraic Solution) ---
+    # Calculate interest specifically on construction (drawn down over time, hence 50%)
+    const_interest = const_cost * 0.5 * interest_rate * loan_period
 
-    total_costs_b = (construction_cost + land_premium + upfront_lump_sum) / 1000
-    gross_profit_b = gross_revenue_b - total_costs_b
+    # Sum all fixed costs
+    fixed_costs = const_cost + prof_fee + sm_fee + dev_profit + const_interest
 
-    mtrc_profit_share_b = (gross_profit_b * (mtrc_profit_share_pct / 100)) if gross_profit_b > 0 else 0
+    # Solve for Residual Value (Land Value)
+    residual_value = (gdv - fixed_costs) / (1 + (interest_rate * loan_period))
 
-    developer_net_b = gross_profit_b - mtrc_profit_share_b
-    mtrc_total_take_b = (upfront_lump_sum / 1000) + mtrc_profit_share_b
+    # Calculate the land interest now that we know the Residual Value
+    land_interest = residual_value * 1.0 * interest_rate * loan_period
+    total_interest = const_interest + land_interest
 
-    # --- Update Metrics ---
-    gross_rev_metric.metric(label="Gross Revenue", value=f"HKD {gross_revenue_b:.2f}B")
-    dev_net_metric.metric(label="Developer Net", value=f"HKD {developer_net_b:.2f}B")
-    mtrc_take_metric.metric(label="MTRC Total Take", value=f"HKD {mtrc_total_take_b:.2f}B")
+    # --- formatting for UI display (Convert to Billions) ---
+    gdv_b = gdv / 1_000_000_000
+    residual_value_b = residual_value / 1_000_000_000
+    total_costs_b = (fixed_costs + land_interest) / 1_000_000_000
+
+    # --- Outputs ---
+    st.subheader("Valuation Results")
+    res_col1, res_col2, res_col3 = st.columns(3)
+
+    with res_col1:
+        st.metric(label="Gross Development Value (GDV)", value=f"HKD {gdv_b:.2f}B")
+    with res_col2:
+        st.metric(label="Total Development Costs", value=f"HKD {total_costs_b:.2f}B")
+    with res_col3:
+        st.metric(label="Residual Land Value", value=f"HKD {residual_value_b:.2f}B")
 
 
 if __name__ == "__main__":
