@@ -216,5 +216,36 @@ def main():
             st.metric(label="Accommodation Value", value=f"HKD {accommodation_value:,.0f}/sf GFA")
 
 
+        st.write("")  # Adds a small visual gap
+        with st.expander("🔍 View Calculation Breakdown"):
+            st.write("### Constituent Components")
+            st.markdown("---")
+
+            exp_col1, exp_col2 = st.columns(2)
+
+            with exp_col1:
+                st.markdown("#### Gross Development Value (GDV)")
+                st.markdown(f"""
+                        * **Total GFA:** {gfa:,.0f} sq ft
+                        * **Efficiency:** {efficiency_pct:,.2f}%
+                        * **Saleable Floor Area (SFA):** {sfa:,.0f} sq ft
+                        * **Average Selling Price (ASP):** HKD {asp:,.0f} / sf
+        
+                        **Total GDV = HKD {gdv:,.0f}**
+                        """)
+
+            with exp_col2:
+                st.markdown("#### Total Development Costs")
+                st.markdown(f"""
+                        * **Construction Cost:** HKD {const_cost:,.0f}
+                        * **Professional Fees:** HKD {prof_fee:,.0f}
+                        * **Sales & Marketing:** HKD {sm_fee:,.0f}
+                        * **Developer Profit:** HKD {dev_profit:,.0f}
+                        * **Construction Interest:** HKD {const_interest:,.0f}
+                        * **Land Interest:** HKD {land_interest:,.0f}
+        
+                        **Total Costs = HKD {total_costs:,.0f}**
+                        """)
+
 if __name__ == "__main__":
     main()
